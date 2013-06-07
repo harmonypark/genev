@@ -1,5 +1,4 @@
 'use strict';
-
 module.exports = function (grunt) {
     // load all grunt tasks
     require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
@@ -23,8 +22,7 @@ module.exports = function (grunt) {
             },
         },
         clean: {
-            dist: ['.tmp', '<%= config.dist %>/*'],
-            test: '.tmp'
+            dist: ['<%= config.dist %>/*'],
         },
         jshint: {
             options: {
@@ -36,6 +34,13 @@ module.exports = function (grunt) {
                 'test/spec/{,*/}*.js'
             ]
         },
+        uglify: {
+            my_target: {
+                files: {
+                    '<%= config.dist %>/genev.min.js': ['<%= config.src %>/genev.js']
+                }
+            }
+        },
         mocha: {
             all: ['test/{,*/}*.html']
         },
@@ -44,9 +49,9 @@ module.exports = function (grunt) {
                 files: [{
                     expand: true,
                     dot: true,
-                    cwd: '<%= site.src %>',
-                    dest: '<%= site.dist %>',
-                    src: []
+                    cwd: '<%= config.src %>',
+                    dest: '<%= config.dist %>',
+                    src: ['genev.js']
                 }]
             },
         },
@@ -59,7 +64,10 @@ module.exports = function (grunt) {
         'mocha'
     ]);
 
+    grunt.registerTask('dist', ['clean', 'copy', 'uglify']);
+
     grunt.registerTask('default', [
-        'test'
+        'test',
+        'dist'
     ]);
 };
