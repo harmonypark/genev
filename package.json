@@ -1,5 +1,5 @@
 {
-  "name"          : "genev",
+  "name"          : "Genev",
   "description"   : "Genev.js creates images using genetic evolution.",
   "url"           : "",
   "keywords"      : ["genetic", "evolution", "image"],
@@ -8,6 +8,7 @@
     "underscore"  : ">=1.4.3"
   },
   "devDependencies": {
+    "underscore"  : ">=1.4.3",
     "grunt": "~0.4.1",
     "grunt-contrib-copy": "~0.4.0",
     "grunt-contrib-uglify": "~0.1.1",

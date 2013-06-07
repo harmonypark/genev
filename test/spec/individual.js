@@ -27,4 +27,19 @@ describe('Individual', function () {
         done();
     });
 
+    it('extended should have a correct prototype', function(done){
+        var extended = Genev.Individual.extend({
+            defaults: {
+                wrapAround: false,
+                width: 100,
+                height: 100
+            },
+        });
+
+        extended.prototype.step.should.be.a('function');
+        expect(extended.prototype.constructor.__super__).to.equal(individual.__proto__);
+
+       done();
+    });
+
 });
