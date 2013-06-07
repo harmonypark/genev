@@ -13,6 +13,6 @@
   "scripts": {
 
   },
-  "main"          : "genev.js",
+  "main": "./dist/all.js",
   "version"       : "0.0.1"
 }
