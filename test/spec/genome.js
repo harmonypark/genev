@@ -24,4 +24,12 @@ describe('Genome', function () {
         }
         done();
     });
+    it('extended should have a correct prototype', function(done){
+        var extended = Genev.Genome.extend({});
+
+        extended.prototype.clone.should.be.a('function');
+        expect(extended.prototype.constructor.__super__).to.equal(genome.__proto__);
+
+       done();
+    });
 });

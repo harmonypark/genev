@@ -19,4 +19,12 @@ describe('Agent', function () {
         }
         done();
     });
+    it('extended should have a correct prototype', function(done){
+        var extended = Genev.Agent.extend({});
+
+        extended.prototype.step.should.be.a('function');
+        expect(extended.prototype.constructor.__super__).to.equal(agent.__proto__);
+
+       done();
+    });
 });
