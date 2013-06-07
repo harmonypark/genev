@@ -56,7 +56,6 @@ module.exports = function (grunt) {
         },
     });
 
-    grunt.renameTask('regarde', 'watch');
 
     grunt.registerTask('test', [
         // 'jshint',
@@ -69,4 +68,5 @@ module.exports = function (grunt) {
         'test',
         'dist'
     ]);
+
 };
