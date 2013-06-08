@@ -6,6 +6,7 @@ module.exports = function (grunt) {
     var config = {
         src: 'src',
         dist: 'dist',
+        test: 'test',
         host: '0.0.0.0',
         port: 9000
     };
@@ -15,7 +16,8 @@ module.exports = function (grunt) {
         watch: {
             js: {
                 files: [
-                    '<%= config.src %>/*.js'
+                    '<%= config.src %>/*.js',
+                    '<%= config.test %>/**/*.js'
                 ],
                 tasks: ['default']
             },

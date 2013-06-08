@@ -9,22 +9,119 @@
         <title></title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="css/harmotap.min.css">
     </head>
     <body>
+        <style type="text/css">
+            .padding--none {
+                padding: 0;
+            }
+        </style>
         <!--[if lt IE 7]>
             <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
         <![endif]-->
 
         <!-- Add your site or application content here -->
-        <p>This is a demonstration of <strong>Genev's Individual</strong> initialized randomly and generating an image:</p>
+        <div class="container">
+            <h1>Genev.js</h1>
+            <p>This is a demonstration of <strong>Genev's Individual</strong> initialized randomly and generating an image:</p>
+            <div class="row">
+                <div class="col-span-2 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
+                <div class="col-span-2 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
+                <div class="col-span-2 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
+                <div class="col-span-2 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
+            </div>
+        </div>
 
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
         <script type="text/javascript" src="http://underscorejs.org/underscore-min.js"></script>
-        <script src="../dist/genev.min.js"></script>
+        <script src="../dist/genev.js"></script>
         <script type="text/javascript">
             $(function() {
-                var individual = new Genev.Individual();
-                console.log(individual, Genev)
+                var individual, canvas, el, ctx, raw, rgb, views, inds;
+                var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+
+                window.requestAnimationFrame = requestAnimationFrame;
+
+                views = prepCanvas('.js__individual');
+                inds = prepIndividuals( views );
+
+                setInterval(function(){
+                    developIndividuals(inds);
+                }, 1);
+
+                draw();
+
+                _.each(inds, function(ind, idx, l){
+                    ind.view.$el.on('click', function(){
+                        var die;
+                        for(var i = 0; i < l.length; ++i){
+                            if(i !== idx){
+                                die = Math.random();
+                                if(die < 0.5){
+                                    l[i].model = l[idx].model.crossover(l[Math.floor(Math.random()*l.length)].model);
+                                } else {
+                                    l[i].model = l[idx].model.mutate();
+                                }
+                                l[idx].view.$el.parent().children('.js__indvidual-genome').html(l[idx].model.toGenomeString());
+                            }
+                        }
+                    });
+                });
+
+                function developIndividuals( inds ){
+                     _.each(inds, function(ind, idx, l){
+                        ind.model.step();
+                     });
+                }
+
+                function prepIndividuals( el ){
+                    var individuals = [], ind;
+
+                    el.each(function(){
+                        ind = new Genev.Individual({width: this.width, height: this.height});
+                        individuals.push({
+                            model: ind,
+                            view: {
+                                el: this,
+                                $el: $(this),
+                                ctx: this.getContext('2d')
+                            }
+                        });
+                    });
+
+                    return individuals;
+                }
+
+                function prepCanvas( selector ){
+                    var $this, width, canvas, els;
+                    els = $( selector );
+                    els.map(function(){
+                        $this = $(this),
+                        width = $this.width(),
+                        canvas = $('<canvas></canvas>');
+                        canvas[0].width = width;
+                        canvas[0].height = width;
+                        return $this.prepend(canvas);
+                    });
+                    return els.children('canvas');
+                }
+
+                function renderIndividuals( inds ){
+                    _.each(inds, function(ind, idx, l){
+                        if(!ind.model.developed){
+                            raw = ind.view.ctx.getImageData(0, 0, ind.model.width, ind.model.height);
+                            raw.data.set(ind.model.getRGBArr());
+                            ind.view.ctx.putImageData(raw, 0, 0);
+                        }
+                    });
+                }
+
+                function draw() {
+                    renderIndividuals( inds );
+                    requestAnimationFrame(draw);
+                }
+
             });
         </script>
 
