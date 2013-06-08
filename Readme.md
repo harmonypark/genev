@@ -1,1 +1,1 @@
-Genev.js creates images using genetic evolution.  
+Genetic image evolver library.
