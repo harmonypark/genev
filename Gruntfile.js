@@ -7,6 +7,7 @@ module.exports = function (grunt) {
         src: 'src',
         dist: 'dist',
         test: 'test',
+        xmpl: 'examples',
         host: '0.0.0.0',
         port: 9000
     };
@@ -47,14 +48,23 @@ module.exports = function (grunt) {
         },
         copy: {
             dist: {
-                files: [{
-                    expand: true,
-                    dot: true,
-                    cwd: '<%= config.src %>',
-                    dest: '<%= config.dist %>',
-                    src: ['genev.js']
-                }]
-            },
+                files: [
+                    {
+                        expand: true,
+                        dot: true,
+                        cwd: '<%= config.src %>',
+                        dest: '<%= config.dist %>',
+                        src: ['genev.js']
+                    },
+                    {
+                        expand: true,
+                        dot: true,
+                        cwd: '<%= config.dist %>',
+                        dest: '<%= config.xmpl %>/scripts',
+                        src: ['genev.min.js']
+                    }
+                ]
+            }
         },
     });
 
@@ -64,11 +74,11 @@ module.exports = function (grunt) {
         'mocha'
     ]);
 
-    grunt.registerTask('dist', ['clean', 'copy', 'uglify']);
+    grunt.registerTask('dist', ['clean', 'uglify', 'copy']);
 
     grunt.registerTask('default', [
+        'dist',
         'test',
-        'dist'
     ]);
 
 };
