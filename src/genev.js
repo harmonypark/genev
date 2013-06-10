@@ -50,6 +50,7 @@
         return x;
       }
     },
+
     probFn: function ( val, prob, fx, fy ) {
       var args = Array.prototype.slice.call(arguments),
         extraArgs,
@@ -81,6 +82,45 @@
     },
     toType: function(obj) {
       return ({}).toString.call(obj).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
+    },
+    rgbToHsb: function(r, g, b){
+      var hue, saturation, brightness, hsbvals = [], cmax, cmin, redc, greenc, bluec;
+      cmax = ( r > g ) ? r : g;
+      if ( b > cmax ) {
+        cmax = b;
+      }
+      cmin = ( r < g ) ? r : g;
+      if ( b < cmin ) {
+        cmin = b;
+      }
+      brightness = ( cmax / 255 );
+      if ( cmax !== 0 ){
+        saturation = ( cmax - cmin ) / cmax;
+      } else {
+        saturation = 0;
+      }
+      if ( saturation === 0 ) {
+        hue = 0;
+      } else {
+        redc = ( cmax - r ) / ( cmax - cmin );
+        greenc = ( cmax - g ) / ( cmax - cmin );
+        bluec = ( cmax - b ) / ( cmax - cmin );
+        if ( r === cmax ) {
+          hue = bluec - greenc;
+        } else if ( g === cmax ) {
+            hue = 2.0 + redc - bluec;
+        } else {
+            hue = 4.0 + greenc - redc;
+        }
+        hue = hue / 6.0;
+        if  (hue < 0 ) {
+          hue = hue + 1.0;
+        }
+      }
+      hsbvals[0] = hue;
+      hsbvals[1] = saturation;
+      hsbvals[2] = brightness;
+      return hsbvals;
     },
     hsvToRgb: function(h, s, v){
       var r, g, b, i, f, p, q, t;
@@ -145,19 +185,20 @@
   //
 
   var individualDefaults = {
-    'useColor': true,
-    'useSaturation': true,
-    'width': 100,
-    'height': 100,
-    'maxAgents': 10,
-    'minAgents': 3,
-    'wrapAround': true
+    useColor: true,
+    useSaturation: true,
+    width: 100,
+    height: 100,
+    maxAgents: 10,
+    minAgents: 3,
+    wrapAround: true
   };
 
   var Individual = Genev.Individual = function( options ){
 
     var args = Array.prototype.slice.call(arguments),
-        stringChunks;
+        stringChunks,
+        extraOptions;
 
     this.options = individualDefaults;
 
@@ -166,17 +207,19 @@
     }
 
     if(typeof args[0] === 'string'){
+      extraOptions = args[1] || {};
       stringChunks =  args[0].split('::');
       this.numAgents = parseInt(stringChunks[0]);
-      this.width = parseInt(stringChunks[1]);
-      this.height = parseInt(stringChunks[2]);
+      this.width = extraOptions.width || parseInt(stringChunks[1]);
+      this.height = extraOptions.height || parseInt(stringChunks[2]);
       this.wrapAround = utils.parseBoolean(stringChunks[3]);
       this.startH = parseFloat(stringChunks[4]);
       this.startS = parseFloat(stringChunks[5]);
       this.startB = parseFloat(stringChunks[6]);
       this.agents = [];
+
       for (var i = 0; i < this.numAgents; ++i){
-        this.agents[i] = new Agent(stringChunks[7 + i]).setIndex(i);
+        this.agents[i] = new Agent(stringChunks[7 + i], _.extend( _.clone(extraOptions), _.omit(this.options, 'agents') ) ).setIndex(i);
       }
     } else {
       this.width = this.options.width;
@@ -186,7 +229,7 @@
       this.startS = this.options.startS || Math.random();
       this.startB = this.options.startB || Math.random();
       this.numAgents = this.options.numAgents || Math.round(Math.random() * (this.options.maxAgents - this.options.minAgents) + this.options.minAgents);
-      this.agents = this.options.agents || this.generateAgents(this.numAgents, this.width, this.height, this.wrapAround);
+      this.agents = this.options.agents || this.generateAgents(this.numAgents, this.options);
     }
 
     this.maxTime = 2 * this.width * this.height;
@@ -196,9 +239,9 @@
     this.s = utils.generateMatrix(this.width, this.height, this.startS);
     this.b = utils.generateMatrix(this.width, this.height, this.startB);
 
-    _.each(this.agents, function(agent){
-      agent.wrapAround = this.wrapAround; // TODO: test if can be removed
-    }, this);
+    // _.each(this.agents, function(agent){
+    //   agent.wrapAround = this.wrapAround; // TODO: test if can be removed
+    // }, this);
 
     this.initialize.apply(this, arguments);
 
@@ -209,38 +252,32 @@
 
     initialize: noop,
 
-    generateAgents: function( number, width, height, wrapAround ){
-      number = number || this.numAgents;
-      width = width || this.width;
-      height = height || this.height;
-      wrapAround = wrapAround || this.wrapAround;
-      var self = this;
+    generateAgents: function( number, options ){
       return _.map(_.range(number), function(v, i, l){
-        return new Agent({
-          index: i,
-          width: width,
-          height: height,
-          wrapAround: wrapAround
-        });
+        return new Agent(_.extend({index: i }, _.omit(options, 'agents') ));
       });
     },
 
-    step: function() {
-      var res, pos;
+    step: function( steps ) {
+      var res, pos, steps = steps || 1;
       if(this.developed){
         return this;
       } else {
-        ++this.time;
-        _.each(this.agents, function(agent){
-          res = agent.step(this, this.time);
-          if(res){
-            pos = res.currPos();
-            this.h[pos.x][pos.y] = res.h;
-            this.s[pos.x][pos.y] = res.s;
-            this.b[pos.x][pos.y] = res.b;
-            res.nextPos();
-          }
-        }, this);
+        for(var i = 0; i < steps; ++i){
+          ++this.time;
+          _.each(this.agents, function(agent){
+            res = agent.step(this, this.time);
+            if(res){
+              pos = res.currPos();
+              this.h[pos.x][pos.y] = res.h;
+              this.s[pos.x][pos.y] = res.s;
+              this.b[pos.x][pos.y] = res.b;
+              res.nextPos();
+            }
+          }, this);
+
+        }
+        
         if(this.time >= this.maxTime) {
           this.developed = true;
         }
@@ -252,7 +289,7 @@
       var newAgents = _.map(this.agents, function(v, i, l){
         return l[i].clone().setIndex(i);
       }, this);
-      return new Individual({
+      return new Individual(_.extend(_.clone(this.options), {
         width: this.width,
         height: this.height,
         wrapAround: this.wrapAround,
@@ -261,7 +298,7 @@
         startS: this.startS,
         startB: this.startB,
         agents: newAgents
-      });
+      }));
     },
 
     mutate: function( prob ) {
@@ -280,12 +317,9 @@
         }, this);
         replace = newNumAgents - 1;
         if(utils.probab(0.75)){
-          newAgents[replace] = new Agent({
-            index: replace,
-            width: this.width,
-            height: this.height,
-            wrapAround: this.wrapAround
-          });
+          newAgents[replace] = new Agent(_.extend(_.omit(this.options, 'agents'), {
+            index: replace
+          }));
         } else {
           swap = Math.floor(Math.random() * replace);
           newAgents[newNumAgents - 1] = this.agents[swap].clone().setIndex(replace);
@@ -303,7 +337,7 @@
         }, this);
       }
 
-      return new Individual({
+      return new Individual(_.extend(_.clone(this.options), {
         width: this.width,
         height: this.height,
         wrapAround: newWrapAround,
@@ -312,7 +346,7 @@
         startS: newStartColors[1],
         startB: newStartColors[2],
         agents: newAgents
-      });
+      }));
     },
 
     crossover: function( individual ) {
@@ -334,7 +368,7 @@
         }
       }, this);
 
-      return new Individual({
+      return new Individual(_.extend(_.clone(this.options), {
         width: this.width,
         height: this.height,
         wrapAround: newWrapAround,
@@ -343,7 +377,7 @@
         startS: newS,
         startB: newB,
         agents: newAgents
-      });
+      }));
     },
 
     toGenomeString: function() {
@@ -361,7 +395,38 @@
       return out;
     },
 
-    getRGBArr: function() {
+    fromRGBA: function( arr ){
+      var width = this.width,
+          height = this.height,
+          row,
+          hsb,
+          rgba = arr,
+          r, g, b, a,
+          hT = 0, sT = 0, bT = 0;
+
+      for(var y = 0; y < height; ++y){
+        row = width * y;
+        for(var x = 0; x < width; ++x){
+          r = rgba[(row + x) * 4];
+          g = rgba[(row + x) * 4 + 1];
+          b = rgba[(row + x) * 4 + 2];
+          a = rgba[(row + x) * 4 + 3];
+          hsb = utils.rgbToHsb( r, g, b );
+          this.h[x][y] = hsb[0];
+          this.s[x][y] = hsb[1];
+          this.b[x][y] = hsb[2];
+          hT += hsb[0];
+          sT += hsb[1];
+          bT += hsb[2];
+        }
+      }
+      this.startH = hT / (width * height);
+      this.startS = sT / (width * height);
+      this.startB = bT / (width * height);
+      return this;
+    },
+
+    getRGBA: function() {
       var width = this.width,
           height = this.height,
           row,
@@ -376,9 +441,9 @@
         for(var x = 0; x < width; ++x){
           rgb = utils.hsvToRgb(h[x][y], s[x][y], b[x][y]);
           raw[(row + x) * 4] = rgb[0];
-            raw[(row + x) * 4 + 1] = rgb[1];
-            raw[(row + x) * 4 + 2] = rgb[2];
-            raw[(row + x) * 4 + 3] = 255; // No transparency hardcoded :/
+          raw[(row + x) * 4 + 1] = rgb[1];
+          raw[(row + x) * 4 + 2] = rgb[2];
+          raw[(row + x) * 4 + 3] = 255; // No transparency hardcoded :/
         }
       }
       return raw;
@@ -411,18 +476,19 @@
   var Agent = Genev.Agent = function( options ){
     var options = options || {},
         args = Array.prototype.slice.call(arguments),
-        stringChunks;
+        stringChunks,
+        extraOptions;
 
     this.genome = new Genome();
 
     _.extend(this, agentDefaults);
     _.extend(this, this._randomizedAttributes());
 
-    if(args.length === 1) {
+    if(args.length === 1 || args.length === 2) {
+      extraOptions = args[1] || {};
       if(typeof args[0] === 'string'){
-
-         stringChunks = args[0].split('#');
-        if(stringChunks){
+          _.extend(this, extraOptions);
+          stringChunks = args[0].split('#');
           this.dir = parseInt(stringChunks[0]);
           this.gen = parseFloat(stringChunks[1]);
           this.genTime1 = parseFloat(stringChunks[2]);
@@ -431,19 +497,20 @@
           this.stop = parseFloat(stringChunks[5]);
           this.width = parseInt(stringChunks[6]);
           this.height = parseInt(stringChunks[7]);
-          this.genome = new Genome(stringChunks[8]);
-        }
+          this.genome = new Genome(stringChunks[8], extraOptions );
+          
       } else {
-         _.extend(this, options);
+          this.genome = new Genome( options );
+          _.extend(this, extraOptions, options);
+          _.extend(this, this._randomizedGridIndex());
       }
     }
 
-    _.extend(this, this._randomizedGridIndex());
-
+   
     this._originalAttributes = _.clone(this);
 
     this.initialize.apply(this, arguments);
-
+   
     return this;
   };
 
@@ -478,6 +545,7 @@
         width: this.width,
         height: this.height,
         wrapAround: this.wrapAround,
+        maxAgents: this.maxAgents,
         genome: this.genome.mutate( prob ),
         dir: newDir,
         gen: newGen,
@@ -502,6 +570,7 @@
         width: this.width,
         height: this.height,
         wrapAround: this.wrapAround,
+        maxAgents: this.maxAgents,
         genome: this.genome.crossover( agent.genome ),
         dir: this._originalAttributes.dir,
         gen: newGen,
@@ -514,17 +583,18 @@
 
     clone: function() {
       return new Agent({
-          x: this._originalAttributes.x,
-          y: this._originalAttributes.y,
-          width: this._originalAttributes.width,
-          height: this._originalAttributes.height,
-          wrapAround: this._originalAttributes.wrapAround,
+          x: this.x,
+          y: this.y,
+          width: this.width,
+          height: this.height,
+          wrapAround: this.wrapAround,
+          maxAgents: this.maxAgents,
           dir: this._originalAttributes.dir,
-          gen: this._originalAttributes.gen,
-          genTime1: this._originalAttributes.genTime1,
-          genTime2: this._originalAttributes.genTime2,
-          delay: this._originalAttributes.delay,
-          stop: this._originalAttributes.stop,
+          gen: this.gen,
+          genTime1: this.genTime1,
+          genTime2: this.genTime2,
+          delay: this.delay,
+          stop: this.stop,
           genome: this.genome.clone()
       });
     },
@@ -533,7 +603,7 @@
       if( time < this.delayInt || time > this.stopInt) {
         return;
       }
-      var inputs = this.collectInputs( individual, time ),
+      var inputs = this._collectInputs( individual, time ),
         response = this.genome.evaluate( inputs ),
         nextPos = this._getNextPosition( this._floatToDir( response[3] ) ),
         changing =  {
@@ -551,10 +621,11 @@
                 s: response[1],
                 b: response[2]
               };
+
       return changing;
     },
 
-    collectInputs: function(individual, time) {
+    _collectInputs: function(individual, time) {
       var bMean = 0.0, bMax = 0.0, bMin = 1.0,
         sMean = 0.0,
         hMean = 0.0,
@@ -587,7 +658,7 @@
         nbPos, hVal, sVal, bVal, currDiff, dBMax, dBMin, dMaxDiff, threshNbhd = new Array(9), die1, die2, n1, n2;
 
       for (var i = 0; i < 9; ++i) {
-        nbPos = this._getNextPosition(i, this.attributes);
+        nbPos = this._getNextPosition(i);
         hVal = individual.h[nbPos.x][nbPos.y];
         sVal = individual.s[nbPos.x][nbPos.y];
         bVal = individual.b[nbPos.x][nbPos.y];
@@ -620,7 +691,7 @@
       dMaxDiff = this._dirToFloat(dirMaxDiff);
 
       for (var i = 0; i < 8; ++i) {
-        nbPos = this._getNextPosition(i, this.attributes);
+        nbPos = this._getNextPosition(i);
         bVal = individual.b[nbPos.x][nbPos.y];
         if(bVal >= bMean) {
           threshNbhd[i] = true;
@@ -665,13 +736,13 @@
     toGenomeString: function() {
 
       var out = this._originalAttributes.dir + '#' +
-          this._originalAttributes.gen + '#' +
-          this._originalAttributes.genTime1 + '#' +
-          this._originalAttributes.genTime2 + '#' +
-          this._originalAttributes.delay + '#' +
-          this._originalAttributes.stop + '#' +
-          this._originalAttributes.width + '#' +
-          this._originalAttributes.height + '#' +
+          this.gen + '#' +
+          this.genTime1 + '#' +
+          this.genTime2 + '#' +
+          this.delay + '#' +
+          this.stop + '#' +
+          this.width + '#' +
+          this.height + '#' +
           this.genome.toGenomeString() + '#';
 
         return out;
@@ -708,13 +779,14 @@
       var maxTime = this.width * this.height * 2,
         delayInt = Math.round(maxTime * this.delay),
         stopInt = Math.round(maxTime * this.stop),
-        root =  Math.sqrt(individualDefaults['maxAgents']),
+        root =  Math.sqrt(this.maxAgents),
         gridX = ((this.index / root) * (this.width / root)) + this.width * 0.1,
         gridY = ((this.index % root) * (this.height / root)) + this.height * 0.1,
         gridX = (gridX >= this.width) ? this.width - (this.width * 0.2) : gridX,
         gridY = (gridY >= this.height) ? this.height - (this.height * 0.2) : gridY,
         x = Math.floor(gridX),
         y = Math.floor(gridY);
+
       return {
         delayInt: delayInt,
         stopInt: stopInt,
@@ -820,6 +892,9 @@
         sin : function( x ) {
           return Math.sin( x );
         },
+        atan : function( x ) {
+          return Math.atan( x );
+        },
         id : function( x ) {
           return x;
         },
@@ -840,12 +915,12 @@
         }
       },
       genomeDefaults = {
-        'agentTreeDepth': 3,
-        'agentInputs': 27, // Agent's collected inputs length - IMPORTANT: need to ensure it correct lenght otherwise we fail
-        'biasHTree': false,
-        'biasSTree': false,
-        'biasBTree': false,
-        'biasNoChange': false
+        agentTreeDepth: 3,
+        agentInputs: 27, // Agents collected inputs length - IMPORTANT: need to ensure it correct lenght otherwise we fail
+        biasHTree: false,
+        biasSTree: false,
+        biasBTree: false,
+        biasNoChange: false
       };
 
 
@@ -861,40 +936,46 @@
     if(utils.toType(args[0]) === "array") {
       attributes = args[0];
       options = args[1] || {};
-    } else if( args.length === 1 && typeof args[0] === 'string' ) {
+
+    } else if( typeof args[0] === 'string' ) {
       stringChunks = args[0].split('!');
       options = args[1] || {};
     } else if ( utils.toType(args[0]) === "object") {
       options = args[0];
+
     }
 
     _.extend(this.options, genomeDefaults, options);
 
-    this.numTotalNodes = Math.floor(Math.pow(2, this.options['agentTreeDepth'] + 1) - 1);
-    this.numInputNodes = Math.floor(Math.pow(2, this.options['agentTreeDepth']));
+    this.numTotalNodes = Math.floor(Math.pow(2, this.options.agentTreeDepth + 1) - 1);
+    this.numInputNodes = Math.floor(Math.pow(2, this.options.agentTreeDepth));
     this.numProcessNodes = this.numTotalNodes - this.numInputNodes;
 
-    this.inputsH = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options['biasNoChange'], 0, true));
-    this.inputsS = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options['biasNoChange'], 1, true));
-    this.inputsB = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options['biasNoChange'], 2, true));
+    this.inputsH = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options.biasNoChange, 0, true));
+    this.inputsS = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options.biasNoChange, 1, true));
+    this.inputsB = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options.biasNoChange, 2, true));
     this.inputsDir = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), false, 0, true));
-    this.nodesH = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options['biasNoChange']);
-    this.nodesS = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options['biasNoChange']);
-    this.nodesB = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options['biasNoChange']);
+    this.nodesH = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options.biasNoChange);
+    this.nodesS = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options.biasNoChange);
+    this.nodesB = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options.biasNoChange);
     this.nodesDir = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, false);
     this.constArr = new Float32Array(_.map(_.range(this.numProcessNodes), Math.random));
 
-    if(this.options['biasHTree'] || this.options['biasSTree'] || this.options['biasBTree']) {
+    if(this.options.biasHTree || this.options.biasSTree || this.options.biasBTree) {
       this.constArr[0] = Math.random() * 0.4 + 0.3;
     }
-    if(this.options['biasSTree']) {
+    if(this.options.biasSTree) {
       this.nodesS[0] = 'ind';
     }
-    if(this.options['biasBTree']) {
+    if(this.options.biasBTree) {
       this.nodesB[0] = 'ind';
     }
 
     if( stringChunks && stringChunks.length > 0 ) {
+      this.numInputNodes = parseInt(stringChunks[0]);
+      this.numProcessNodes = parseInt(stringChunks[1]);
+      this.numTotalNodes = this.numInputNodes + this.numProcessNodes;
+      stringChunks = stringChunks.splice(2);
       chunkCount = 0;
       for ( var i = 0; i < this.numInputNodes; ++i ) {
         this.inputsH[i] = parseInt(stringChunks[chunkCount]);
@@ -911,12 +992,17 @@
         this.constArr[i] = parseFloat(stringChunks[chunkCount + 4]);
         chunkCount += 5;
       }
-      return this;
     }
 
     for(var i = 0; i < attributes.length; ++i) {
       if(attributes[i] instanceof Array || attributes[i] instanceof Uint8Array || attributes[i] instanceof Float32Array){
         this[attrNames[i]] = attributes[i];
+        // if(attrNames[i] === 'nodesH'){
+        //   this.numProcessNodes = attributes[i].length; // need to reset the length due to mutation/crossover diff process nodes number.
+        // }
+        // if(attrNames[i] === 'inputsH'){
+        //   this.numInputNodes = attributes[i].length;
+        // }
       }
     }
 
@@ -962,9 +1048,9 @@
       } else {
         var prob = 0.5,
             cross,
-            clone =   _.pick(this, 'inputsH', 'inputsS', 'inputsB', 'inputsDir', 'nodesH', 'nodesS', 'nodesB', 'nodesDir', 'constArr'),
+            bigger =   _.pick( ((this.numProcessNodes > genome.numProcessNodes) ? this : genome), 'inputsH', 'inputsS', 'inputsB', 'inputsDir', 'nodesH', 'nodesS', 'nodesB', 'nodesDir', 'constArr'),
             newAttr = _.map(
-              clone,
+              bigger,
               function(val, key, list){
                 cross = _.map(
                   val,
@@ -977,28 +1063,31 @@
             ),
             newOptions = {};
             _.each(
-              this.options,
+              bigger.options,
               function(val, key, obj){
-                newOptions[key] = (val >= genome.options[key]) ? val : genome.options[key];
+                newOptions[key] = val;
               }
             );
         return new Genome( newAttr, newOptions );
       }
     },
     evaluate: function( inputs ) {
-      var hVals = new Float32Array(this.numTotalNodes),
-        sVals = new Float32Array(this.numTotalNodes),
-        bVals = new Float32Array(this.numTotalNodes),
-        dirVals = new Float32Array(this.numTotalNodes),
-        child1Index,
-        child2Index;
 
-      for( var i = this.numProcessNodes; i < this.numTotalNodes; i++ ) {
-        hVals[i] = inputs[this.inputsH[ i - this.numProcessNodes ]];
-        sVals[i] = inputs[this.inputsS[ i - this.numProcessNodes ]];
-        bVals[i] = inputs[this.inputsB[ i - this.numProcessNodes ]];
-        dirVals[i] = inputs[this.inputsDir[ i - this.numProcessNodes ]];
+      var hVals = new Float32Array(this.numTotalNodes),
+          sVals = new Float32Array(this.numTotalNodes),
+          bVals = new Float32Array(this.numTotalNodes),
+          dirVals = new Float32Array(this.numTotalNodes),
+          child1Index,
+          child2Index;
+
+      for( var i = this.numProcessNodes; i < this.numTotalNodes - 1 ; i++ ) {
+        hVals[i] = inputs[this.inputsH[ i - this.numProcessNodes ]] || 0;
+        sVals[i] = inputs[this.inputsS[ i - this.numProcessNodes ]] || 0;
+        bVals[i] = inputs[this.inputsB[ i - this.numProcessNodes ]] || 0;
+        dirVals[i] = inputs[this.inputsDir[ i - this.numProcessNodes ]] || 0;
+
       }
+
 
       for( var i = this.numProcessNodes - 1; i >= 0; i-- ) {
         child1Index = i * 2 + 1;
@@ -1007,12 +1096,15 @@
         sVals[i] = utils.ringify(ops[this.nodesS[i]].apply(this, [sVals[child1Index], sVals[child2Index], i]));
         bVals[i] = utils.ringify(ops[this.nodesB[i]].apply(this, [bVals[child1Index], bVals[child2Index], i]));
         dirVals[i] = utils.ringify(ops[this.nodesDir[i]].apply(this, [dirVals[child1Index], dirVals[child2Index], i]));
+        // if(isNaN(hVals[i]) || isNaN(sVals[i]) || isNaN(bVals[i]) || isNaN(dirVals[i])){
+        //   console.log(i)
+        // }
       }
-
+       
       return [hVals[0], sVals[0], bVals[0], dirVals[0]];
     },
     toGenomeString: function() {
-      var out = '';
+      var out = this.numInputNodes+'!'+this.numProcessNodes+'!';
       for( var i = 0; i < this.numInputNodes; ++i ) {
         out += this.inputsH[i] + '!';
         out += this.inputsS[i] + '!';
@@ -1061,9 +1153,9 @@
           return 7;
         }
       } else if( init ) {
-        return Math.floor( Math.random() * (this.options['agentInputs'] - 1) + 1 );
+        return Math.floor( Math.random() * (this.options.agentInputs - 1) + 1 );
       } else {
-        return Math.random() * this.options['agentInputs'];
+        return Math.random() * this.options.agentInputs;
       }
     },
     _getRandomFunction: function( biasNoChange ) {
@@ -1081,12 +1173,14 @@
           return 'max';
         } else if ( die < 0.06 ) {
           return 'min';
-        } else if ( die < 0.65 ) {
+        } else if ( die < 0.8 ) {
+          return 'div';
+        } else if ( die < 0.85 ) {
           return 'id';
         } else if ( die < 0.88 ) {
           return 'realmean';
-        } else if ( die < 0.8 ) {
-          return 'div';
+        } else if ( die < 0.9 ){
+          return 'atan';
         } else if ( die < 0.98 ) {
           return 'incdec';
         } else if ( die < 0.99 ) {
@@ -1107,6 +1201,8 @@
           return 'max';
         } else if ( die < 0.35 ) {
           return 'min';
+        } else if ( die < 0.5 ){
+          return 'atan';
         } else if ( die < 0.6 ) {
           return 'id';
         } else if ( die < 0.82 ) {
