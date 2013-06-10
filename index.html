@@ -31,7 +31,7 @@
                 <li>Long strings that appear in the text areas can be copied and pasted to generate a new individual based on a copied genome string</li>
                 <li>If images do not seem to evolve to anything, refresh this page to regenerate the population</li>
             </ul>
-            <div class="row">
+            <div class="row col-span-8">
                 <div class="col-span-3 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
                 <div class="col-span-3 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
                 <div class="col-span-3 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
@@ -41,7 +41,12 @@
 
         <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
         <script type="text/javascript" src="http://underscorejs.org/underscore-min.js"></script>
-        <script type="text/javascript" src="scripts/genev.min.js"></script>
+        <script type="text/javascript" src="../src/genev.js"></script>
+        <script type="text/javascript">
+            var genomes = [
+            '4::187::187::true::0.04824093752540648::0.33252005162648857::0.2178596337325871::0#0.2752377800643444#0.6685158286709338#0.5709147432353348#0.32868970838841055#0.8163912438880653#187#187#16!15!18!13!2!10!19!25!8!22!10!24!15!14!7!1!12!7!22!7!2!7!3!7!17!20!2!23!17!11!21!21!1!15!11!23!6!8!4!12!18!11!12!25!20!4!1!7!12!26!14!5!25!13!14!2!24!5!12!6!14!6!16!3!11!20!incdec!mult!realmean!realmean!0.20921768248081207!incdec!min!incdec!realmean!0.04154617339372635!atan!sub!id!sub!0.1563183218240738!id!realmean!atan!sin!0.30729615688323975!id!realmean!id!incdec!0.05128529667854309!max!realmean!atan!add!0.5156066417694092!atan!id!ind!realmean!0.6237499117851257!realmean!atan!sin!sin!0.0566822811961174!min!ind!realmean!min!0.5166385173797607!atan!realmean!atan!id!0.027657782658934593!realmean!sub!ind!sin!0.7455112338066101!ind!id!realmean!realmean!0.0743936151266098!realmean!sin!min!realmean!0.9862100481987!atan!realmean!mult!incdec!0.14429908990859985!sin!ind!realmean!ind!0.20598053932189941!#::8#0.8144118313211948#0.03797606844455004#0.034645340172573924#0#0.1366110253147781#187#187#16!15!3!8!19!18!12!22!2!9!12!25!8!21!8!25!6!26!23!6!8!26!3!18!24!24!7!21!26!10!21!24!12!1!9!22!15!12!19!7!12!11!3!17!8!4!6!2!2!13!18!18!17!1!13!21!19!11!17!12!12!16!6!14!20!11!realmean!realmean!mult!id!0.8973068594932556!ind!atan!id!incdec!0.20146940648555756!add!atan!realmean!realmean!0.7619971632957458!realmean!realmean!realmean!incdec!0.3752633035182953!atan!sin!min!atan!0.519839882850647!max!atan!incdec!atan!0.9482986927032471!ind!incdec!atan!atan!0.6343479156494141!realmean!sin!realmean!ind!0.05123399198055267!realmean!ind!realmean!realmean!0.574500560760498!ind!realmean!sub!id!0.30208227038383484!min!sub!realmean!realmean!0.7404586672782898!realmean!atan!atan!mult!0.8843224048614502!atan!atan!sub!min!0.13520489633083344!atan!ind!realmean!realmean!0.928860068321228!incdec!sub!mult!realmean!0.9229795932769775!#::0#0.6550044340547174#0.5380401653237641#0.523723172955215#0.240556821199134#0.658741338760592#187#187#16!15!18!13!2!10!19!25!8!24!10!24!7!14!8!1!12!26!10!6!8!7!3!7!17!20!2!21!17!10!21!21!12!1!11!23!6!8!4!12!18!11!12!25!20!4!1!7!12!26!14!5!25!13!14!2!24!5!12!6!14!6!16!3!11!20!incdec!id!realmean!realmean!0.8973068594932556!div!min!id!incdec!0.04154617339372635!atan!atan!id!realmean!0.1563183218240738!id!realmean!realmean!sin!0.13886822760105133!atan!realmean!id!incdec!0.4045014977455139!max!realmean!atan!add!0.9211183190345764!atan!id!realmean!realmean!0.6237499117851257!realmean!atan!sin!sin!0.0566822811961174!min!ind!realmean!min!0.5166385173797607!atan!realmean!atan!id!0.027657782658934593!realmean!sub!ind!sin!0.7455112338066101!ind!id!realmean!realmean!0.0743936151266098!realmean!sin!min!realmean!0.9862100481987!atan!realmean!mult!incdec!0.14429908990859985!sin!ind!realmean!ind!0.20598053932189941!#::8#0.2279216800816357#0.6624500961042941#0.004074810771271586#0.02922981628915295#0.8115796893881635#187#187#16!15!3!14!16!21!12!22!2!24!14!2!7!5!7!6!24!13!1!6!3!20!22!17!24!20!7!15!26!6!21!4!13!1!7!5!16!15!7!11!7!21!11!11!6!10!6!16!25!9!25!9!5!18!10!17!21!16!18!16!17!20!17!3!22!11!incdec!min!realmean!ind!0.8170696496963501!max!ind!sub!incdec!0.5586767792701721!realmean!id!add!realmean!0.13532419502735138!realmean!realmean!realmean!incdec!0.6701232194900513!atan!realmean!realmean!atan!0.4045014977455139!realmean!realmean!realmean!atan!0.9211183190345764!ind!div!realmean!atan!0.6343479156494141!atan!id!mult!id!0.6426646113395691!sub!atan!add!realmean!0.37855803966522217!realmean!sin!sin!incdec!0.3639819025993347!mult!realmean!realmean!realmean!0.43180859088897705!realmean!mult!incdec!ind!0.5906747579574585!sin!min!id!min!0.9855763912200928!div!ind!id!mult!0.08969180285930634!min!realmean!id!atan!0.5043891072273254!#::'
+            ];
+        </script>
         <script type="text/javascript">
             $(function() {
                 var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame,
@@ -51,9 +56,12 @@
 
                 window.requestAnimationFrame = requestAnimationFrame;
 
+                // prepSampleImage('img/puppy.jpg');
+
                 setInterval(function(){
                     developIndividuals(individuals);
                 }, 1);
+
 
                 draw();
 
@@ -81,7 +89,7 @@
 
                 function developIndividuals( individuals ){
                      _.each(individuals, function(ind, idx, l){
-                        ind.model.step();
+                        ind.model.step( 200 );
                      });
                 }
 
@@ -89,7 +97,7 @@
                     var individuals = [], ind;
 
                     el.each(function(){
-                        ind = new Genev.Individual({width: this.width, height: this.height});
+                        ind = new Genev.Individual({width: this.width, height: this.height, maxAgents: Math.round(Math.random()*3 + 3), minAgents: 2, agentTreeDepth: Math.round(Math.random() * 4 + 2)});
                         individuals.push({
                             model: ind,
                             view: {
@@ -111,10 +119,31 @@
                         width = $this.width(),
                         canvas = $('<canvas></canvas>');
                         canvas[0].width = width;
-                        canvas[0].height = width * 0.5;
+                        canvas[0].height = width;
                         return $this.prepend(canvas);
                     });
                     return els.children('canvas');
+                }
+
+                function prepSampleImage( url ){
+                    var img = new Image();
+                    img.onload = _.partial(onSampleImageLoaded, img);
+                    img.src = url;
+                }
+
+                function onSampleImageLoaded( img ){
+                    var canvas = $('<canvas></canvas>')[0],
+                        ctx = canvas.getContext('2d'),
+                        raw;
+
+                   canvas.width = img.width;
+                   canvas.height = img.height;
+                   ctx.drawImage(img, 0, 0);
+                   raw = ctx.getImageData(0, 0, img.width, img.height);
+
+                   _.each(individuals, function( ind ){
+                        ind.model.fromRGBA(raw.data);
+                   });
                 }
 
                 function renderIndividuals( individuals ){
@@ -122,7 +151,7 @@
                     _.each(individuals, function(ind, idx, l){
                         if(!ind.model.developed){
                             raw = ind.view.ctx.getImageData(0, 0, ind.model.width, ind.model.height);
-                            raw.data.set(ind.model.getRGBArr());
+                            raw.data.set(ind.model.getRGBA());
                             ind.view.ctx.putImageData(raw, 0, 0);
                         }
                     });
