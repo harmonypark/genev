@@ -31,12 +31,13 @@
                 <li>Long strings that appear in the text areas can be copied and pasted to generate a new individual based on a copied genome string</li>
                 <li>If images do not seem to evolve to anything, refresh this page to regenerate the population</li>
             </ul>
-            <div class="row col-span-8">
+            <div class="row col-span-10">
                 <div class="col-span-3 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
                 <div class="col-span-3 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
                 <div class="col-span-3 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
                 <div class="col-span-3 js__individual padding--none"><textarea rows="8" class="js__indvidual-genome" style="resize:vertical;"></textarea></div>
             </div>
+
         </div>
 
         <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
@@ -78,11 +79,12 @@
                                     l[i].model = l[idx].model.mutate();
                                 }
                             }
-                            l[i].view.$el.parent().children('.js__indvidual-genome').html(l[i].model.toGenomeString());
+                            l[i].view.$el.parent().children('.js__indvidual-genome').html(l[i].model.toJSON());
                         }
                     });
                     ind.view.$el.parent().children('.js__indvidual-genome').on('change', function(){
-                        ind.model = new Genev.Individual($(this).val());
+                        var json = $(this).val();
+                        ind.model = new Genev.Individual().fromJSON(json);
                     });
                 });
 
@@ -96,7 +98,8 @@
                     var individuals = [], ind;
 
                     el.each(function(){
-                        ind = new Genev.Individual({width: this.width, height: this.height, maxAgents: Math.round(Math.random()*3 + 3), minAgents: 2, agentTreeDepth: Math.round(Math.random() * 4 + 2)});
+
+                        ind = new Genev.Individual({options: {width: this.width, height: this.height, maxAgents: Math.round(Math.random()*3 + 3), minAgents: 1, agentTreeDepth: Math.round(Math.random() * 4 + 2)}});
                         individuals.push({
                             model: ind,
                             view: {
@@ -105,6 +108,7 @@
                                 ctx: this.getContext('2d')
                             }
                         });
+
                     });
 
                     return individuals;
@@ -149,7 +153,7 @@
                     var raw;
                     _.each(individuals, function(ind, idx, l){
                         if(!ind.model.developed){
-                            raw = ind.view.ctx.getImageData(0, 0, ind.model.width, ind.model.height);
+                            raw = ind.view.ctx.getImageData(0, 0, ind.model.options.width, ind.model.options.height);
                             raw.data.set(ind.model.getRGBA());
                             ind.view.ctx.putImageData(raw, 0, 0);
                         }
