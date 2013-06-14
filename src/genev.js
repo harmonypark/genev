@@ -170,6 +170,7 @@
       }
       return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
     }
+
   };
 
   // Genev function placeholder
@@ -185,63 +186,43 @@
   //
 
   var individualDefaults = {
-    useColor: true,
-    useSaturation: true,
-    width: 100,
-    height: 100,
-    maxAgents: 10,
-    minAgents: 3,
-    wrapAround: true
+    options: {
+      useColor: true,
+      useSaturation: true,
+      width: 100,
+      height: 100,
+      maxAgents: 10,
+      minAgents: 3,
+      wrapAround: true
+    }
   };
 
-  var Individual = Genev.Individual = function( options ){
+  var Individual = Genev.Individual = function( attributes ){
 
-    var args = Array.prototype.slice.call(arguments),
-        stringChunks,
-        extraOptions;
+    attributes = attributes || {};
 
-    this.options = individualDefaults;
+    var options = _.clone(individualDefaults.options);
 
-    if(utils.toType(options) === 'object'){
-      _.extend(this.options, options);
-    }
+    this.startH = Math.random();
+    this.startS = Math.random();
+    this.startB = Math.random();
 
-    if(typeof args[0] === 'string'){
-      extraOptions = args[1] || {};
-      stringChunks =  args[0].split('::');
-      this.numAgents = parseInt(stringChunks[0]);
-      this.width = extraOptions.width || parseInt(stringChunks[1]);
-      this.height = extraOptions.height || parseInt(stringChunks[2]);
-      this.wrapAround = utils.parseBoolean(stringChunks[3]);
-      this.startH = parseFloat(stringChunks[4]);
-      this.startS = parseFloat(stringChunks[5]);
-      this.startB = parseFloat(stringChunks[6]);
-      this.agents = [];
+    _.extend(options, attributes.options);
 
-      for (var i = 0; i < this.numAgents; ++i){
-        this.agents[i] = new Agent(stringChunks[7 + i], _.extend( _.clone(extraOptions), _.omit(this.options, 'agents') ) ).setIndex(i);
-      }
-    } else {
-      this.width = this.options.width;
-      this.height = this.options.height;
-      this.wrapAround = this.options.wrapAround;
-      this.startH = this.options.startH || Math.random();
-      this.startS = this.options.startS || Math.random();
-      this.startB = this.options.startB || Math.random();
-      this.numAgents = this.options.numAgents || Math.round(Math.random() * (this.options.maxAgents - this.options.minAgents) + this.options.minAgents);
-      this.agents = this.options.agents || this.generateAgents(this.numAgents, this.options);
-    }
+    attributes.options = options;
 
-    this.maxTime = 2 * this.width * this.height;
+    _.extend(this, attributes);
+
+    this.options.numAgents = this.options.numAgents || Math.round(Math.random() * (this.options.maxAgents - this.options.minAgents) + this.options.minAgents);
+
+    this.agents = (this.agents) ? ( (this.agents[0] instanceof Agent) ? this.agents :_.map(this.agents, function(a, idx, l){ return new Agent(a);})) : this.generateAgents(this.options);
+
+    this.maxTime = 2 * this.options.width * this.options.height;
     this.time = 0;
     this.developed = false;
-    this.h = utils.generateMatrix(this.width, this.height, this.startH);
-    this.s = utils.generateMatrix(this.width, this.height, this.startS);
-    this.b = utils.generateMatrix(this.width, this.height, this.startB);
-
-    // _.each(this.agents, function(agent){
-    //   agent.wrapAround = this.wrapAround; // TODO: test if can be removed
-    // }, this);
+    this.h = utils.generateMatrix(this.options.width, this.options.height, this.startH);
+    this.s = utils.generateMatrix(this.options.width, this.options.height, this.startS);
+    this.b = utils.generateMatrix(this.options.width, this.options.height, this.startB);
 
     this.initialize.apply(this, arguments);
 
@@ -252,9 +233,10 @@
 
     initialize: noop,
 
-    generateAgents: function( number, options ){
-      return _.map(_.range(number), function(v, i, l){
-        return new Agent(_.extend({index: i }, _.omit(options, 'agents') ));
+    generateAgents: function( options ){
+
+      return _.map(_.range(options.numAgents), function(v, i, l){
+        return new Agent({options: _.clone(options), index: i });
       });
     },
 
@@ -277,7 +259,7 @@
           }, this);
 
         }
-        
+
         if(this.time >= this.maxTime) {
           this.developed = true;
         }
@@ -289,42 +271,40 @@
       var newAgents = _.map(this.agents, function(v, i, l){
         return l[i].clone().setIndex(i);
       }, this);
-      return new Individual(_.extend(_.clone(this.options), {
-        width: this.width,
-        height: this.height,
-        wrapAround: this.wrapAround,
-        numAgents: this.numAgents,
+      return new Individual({
+        options: _.clone(this.options),
         startH: this.startH,
         startS: this.startS,
         startB: this.startB,
         agents: newAgents
-      }));
+      });
     },
 
     mutate: function( prob ) {
       var self = this,
-          newNumAgents = this.numAgents,
+          newNumAgents = this.options.numAgents,
           newAgents = [], replace, swap,
-          newWrapAround = this.wrapAround,
+          newWrapAround = this.options.wrapAround,
           newStartColors = _.map([this.startH, this.startS, this.startB], function(v, i, l){
             return (utils.probab(prob)) ? utils.ringify(l[i] + utils.gaussRandom()) : l[i];
           });
 
-      if((utils.probab(2 * prob)) && (this.numAgents < (individualDefaults['maxAgents']) - 1)){
+      if((utils.probab(2 * prob)) && (this.options.numAgents < (individualDefaults['maxAgents']) - 1)){
         ++newNumAgents;
         newAgents = _.map(_.range(newNumAgents - 1), function(v, i, l){
           return this.agents[i].clone().setIndex(i);
         }, this);
         replace = newNumAgents - 1;
         if(utils.probab(0.75)){
-          newAgents[replace] = new Agent(_.extend(_.omit(this.options, 'agents'), {
+          newAgents[replace] = new Agent({
+            options: _.clone(this.options),
             index: replace
-          }));
+          });
         } else {
           swap = Math.floor(Math.random() * replace);
           newAgents[newNumAgents - 1] = this.agents[swap].clone().setIndex(replace);
         }
-      } else if ((utils.probab(2 * prob)) && (this.numAgents > individualDefaults['minAgents'])){
+      } else if ((utils.probab(2 * prob)) && (this.options.numAgents > individualDefaults['minAgents'])){
         --newNumAgents;
         newAgents = _.map(_.range(newNumAgents), function(v, i, l){
           return this.agents[i].clone().setIndex(i);
@@ -337,21 +317,21 @@
         }, this);
       }
 
-      return new Individual(_.extend(_.clone(this.options), {
-        width: this.width,
-        height: this.height,
-        wrapAround: newWrapAround,
-        numAgents: newNumAgents,
+      return new Individual({
+        options: _.extend(_.clone(this.options), {
+            wrapAround: newWrapAround,
+            numAgents: newNumAgents
+        }),
         startH: newStartColors[0],
         startS: newStartColors[1],
         startB: newStartColors[2],
         agents: newAgents
-      }));
+      });
     },
 
     crossover: function( individual ) {
-      var newNumAgents = (utils.probab(0.5)) ? individual.numAgents : this.numAgents,
-        newWrapAround = (utils.probab(0.5)) ? individual.wrapAround : this.wrapAround,
+      var newNumAgents = (utils.probab(0.5)) ? individual.options.numAgents : this.options.numAgents,
+        newWrapAround = (utils.probab(0.5)) ? individual.options.wrapAround : this.options.wrapAround,
         newH = (utils.probab(0.5)) ? individual.startH : this.startH,
         newS = (utils.probab(0.5)) ? individual.startS : this.startS,
         newB = (utils.probab(0.5)) ? individual.startB : this.startB,
@@ -359,20 +339,20 @@
 
       newAgents = _.map(_.range(newNumAgents), function(v, i, l){
         if(utils.probab(0.33)) {
-          return this.agents[Math.floor(Math.random()* this.numAgents)].clone().setIndex(i);
+          return this.agents[Math.floor(Math.random()* this.options.numAgents)].clone().setIndex(i);
         } else if(utils.probab(0.5)) {
-          cross = individual.agents[Math.floor(Math.random()* individual.numAgents)];
-          return this.agents[Math.floor(Math.random()* this.numAgents)].crossover(cross).setIndex(i);
+          cross = individual.agents[Math.floor(Math.random()* individual.options.numAgents)];
+          return this.agents[Math.floor(Math.random()* this.options.numAgents)].crossover(cross).setIndex(i);
         } else {
-          return this.agents[Math.floor(Math.random()* this.numAgents)].clone().setIndex(i);
+          return this.agents[Math.floor(Math.random()* this.options.numAgents)].clone().setIndex(i);
         }
       }, this);
 
       return new Individual(_.extend(_.clone(this.options), {
-        width: this.width,
-        height: this.height,
-        wrapAround: newWrapAround,
-        numAgents: newNumAgents,
+        options: _.extend(_.clone(this.options), {
+            wrapAround: newWrapAround,
+            numAgents: newNumAgents
+        }),
         startH: newH,
         startS: newS,
         startB: newB,
@@ -380,24 +360,27 @@
       }));
     },
 
-    toGenomeString: function() {
-      var out = this.numAgents + '::' +
-          this.width + '::' +
-          this.height + '::' +
-          this.wrapAround + '::' +
-          this.startH + '::' +
-          this.startS + '::' +
-          this.startB + '::';
+    toJSON: function() {
+      return JSON.stringify(
+        _.pick(
+          this,
+          'options',
+          'startH',
+          'startS',
+          'startB',
+          'agents'
+        )
+      );
+    },
 
-      for(var i = 0; i < this.numAgents; ++i){
-        out += this.agents[i].toGenomeString() + '::';
-      }
-      return out;
+    fromJSON: function( string ) {
+      var obj = JSON.parse(string);
+      return new Individual(obj);
     },
 
     fromRGBA: function( arr ){
-      var width = this.width,
-          height = this.height,
+      var width = this.options.width,
+          height = this.options.height,
           row,
           hsb,
           rgba = arr,
@@ -427,8 +410,8 @@
     },
 
     getRGBA: function() {
-      var width = this.width,
-          height = this.height,
+      var width = this.options.width,
+          height = this.options.height,
           row,
           h = this.h,
           s = this.s,
@@ -446,6 +429,7 @@
           raw[(row + x) * 4 + 3] = 255; // No transparency hardcoded :/
         }
       }
+
       return raw;
     }
 
@@ -459,58 +443,37 @@
   //
 
   var agentDefaults = {
-      'x': 0,
-      'y': 0,
-      'dir': 0,
-      'delay': 0,
-      'delayInt': 0,
-      'stop': 1,
-      'stopInt': 99999999,
-      'gen': 0,
-      'genTime1': 0,
-      'genTime2': 0,
-      'wrapAround': true,
-      'index': 1
+      x: 0,
+      y: 0,
+      dir: 0,
+      delay: 0,
+      delayInt: 0,
+      stop: 1,
+      stopInt: 99999999,
+      gen: 0,
+      genTime1: 0,
+      genTime2: 0,
+      index: 1,
+      options: {
+        width: 100,
+        height: 100,
+        wrapAround: true,
+        maxAgents: 3
+      }
   };
 
-  var Agent = Genev.Agent = function( options ){
-    var options = options || {},
-        args = Array.prototype.slice.call(arguments),
-        stringChunks,
-        extraOptions;
+  var Agent = Genev.Agent = function( attributes ){
 
-    this.genome = new Genome();
-
-    _.extend(this, agentDefaults);
-    _.extend(this, this._randomizedAttributes());
-
-    if(args.length === 1 || args.length === 2) {
-      extraOptions = args[1] || {};
-      if(typeof args[0] === 'string'){
-          _.extend(this, extraOptions);
-          stringChunks = args[0].split('#');
-          this.dir = parseInt(stringChunks[0]);
-          this.gen = parseFloat(stringChunks[1]);
-          this.genTime1 = parseFloat(stringChunks[2]);
-          this.genTime2 = parseFloat(stringChunks[3]);
-          this.delay = parseFloat(stringChunks[4]);
-          this.stop = parseFloat(stringChunks[5]);
-          this.width = parseInt(stringChunks[6]);
-          this.height = parseInt(stringChunks[7]);
-          this.genome = new Genome(stringChunks[8], extraOptions );
-          
-      } else {
-          this.genome = new Genome( options );
-          _.extend(this, extraOptions, options);
-          _.extend(this, this._randomizedGridIndex());
-      }
-    }
-
-   
-    this._originalAttributes = _.clone(this);
-
+    attributes = attributes || {};
+    var options = _.clone(agentDefaults.options);
+    _.extend(options, attributes.options);
+    attributes.options = options;
+    _.extend(this, this._randomizedAttributes(), _.omit(agentDefaults, 'options'), attributes);
+    this.genome = (attributes.genome) ? ( (attributes.genome instanceof Genome) ? attributes.genome : new Genome(attributes.genome)) : new Genome();
+    _.extend(this, this._setPositionOnGrid());
+    this._originalAttributes = _.clone(_.pick(this, ['dir', 'gen', 'genTime1', 'genTime2', 'delay', 'stop', 'options']));
     this.initialize.apply(this, arguments);
-   
+
     return this;
   };
 
@@ -520,7 +483,7 @@
 
     setIndex: function(index){
       this.index = index;
-      _.extend(this, this._randomizedAttributes());
+      _.extend(this, this._setPositionOnGrid());
       return this;
     },
 
@@ -540,12 +503,7 @@
       }
 
       return new Agent({
-        x: this.x,
-        y: this.y,
-        width: this.width,
-        height: this.height,
-        wrapAround: this.wrapAround,
-        maxAgents: this.maxAgents,
+        options: this.options,
         genome: this.genome.mutate( prob ),
         dir: newDir,
         gen: newGen,
@@ -565,12 +523,7 @@
           newStop = (Math.random() < prob) ? agent.stop : this.stop;
 
       return new Agent({
-        x: this.x,
-        y: this.y,
-        width: this.width,
-        height: this.height,
-        wrapAround: this.wrapAround,
-        maxAgents: this.maxAgents,
+        options: this.options,
         genome: this.genome.crossover( agent.genome ),
         dir: this._originalAttributes.dir,
         gen: newGen,
@@ -583,12 +536,7 @@
 
     clone: function() {
       return new Agent({
-          x: this.x,
-          y: this.y,
-          width: this.width,
-          height: this.height,
-          wrapAround: this.wrapAround,
-          maxAgents: this.maxAgents,
+          options: this.options,
           dir: this._originalAttributes.dir,
           gen: this.gen,
           genTime1: this.genTime1,
@@ -733,21 +681,23 @@
       return [ rand, bCurr, bMean, bMax, bMin, dBMin, bPrev, sCurr, sMean, sPrev, hCurr, hMean, hPrev, dP, dMaxDiff, dRandBright, dRandDark, this.gen, loopTime1, loopTime2, dirWhiteWithBlackNbh, dirBlackWithWhiteNbh, individual.startH, individual.startS, individual.startB, dirWhiteWithBlackNbh2, dirBlackWithWhiteNbh2 ];
     },
 
-    toGenomeString: function() {
-
-      var out = this._originalAttributes.dir + '#' +
-          this.gen + '#' +
-          this.genTime1 + '#' +
-          this.genTime2 + '#' +
-          this.delay + '#' +
-          this.stop + '#' +
-          this.width + '#' +
-          this.height + '#' +
-          this.genome.toGenomeString() + '#';
-
-        return out;
+    toJSON: function() {
+      return _.pick(
+        this,
+        'dir',
+        'gen',
+        'genTime1',
+        'genTime2',
+        'delay',
+        'stop',
+        'genome',
+        'options'
+      );
     },
-
+    fromJSON: function( string ) {
+      var obj = JSON.parse(string);
+      return new Agent(obj);
+    },
     _randomizedAttributes: function( die ) {
       die = die || Math.random();
       var dir = Math.floor(Math.random() * 9),
@@ -775,18 +725,17 @@
       }
     },
 
-    _randomizedGridIndex: function() {
-      var maxTime = this.width * this.height * 2,
+    _setPositionOnGrid: function() {
+      var maxTime = this.options.width * this.options.height * 2,
         delayInt = Math.round(maxTime * this.delay),
         stopInt = Math.round(maxTime * this.stop),
-        root =  Math.sqrt(this.maxAgents),
-        gridX = ((this.index / root) * (this.width / root)) + this.width * 0.1,
-        gridY = ((this.index % root) * (this.height / root)) + this.height * 0.1,
-        gridX = (gridX >= this.width) ? this.width - (this.width * 0.2) : gridX,
-        gridY = (gridY >= this.height) ? this.height - (this.height * 0.2) : gridY,
+        root =  Math.sqrt(this.options.maxAgents),
+        gridX = ((this.index / root) * (this.options.width / root)) + this.options.width * 0.1,
+        gridY = ((this.index % root) * (this.options.height / root)) + this.options.height * 0.1,
+        gridX = (gridX >= this.options.width) ? this.options.width - (this.options.width * 0.2) : gridX,
+        gridY = (gridY >= this.options.height) ? this.options.height - (this.options.height * 0.2) : gridY,
         x = Math.floor(gridX),
         y = Math.floor(gridY);
-
       return {
         delayInt: delayInt,
         stopInt: stopInt,
@@ -797,9 +746,9 @@
 
     _getNextPosition: function( dir ) {
       var pos = [this.x, this.y],
-        wrapAround = this.wrapAround,
-        width = this.width,
-        height = this.height;
+        wrapAround = this.options.wrapAround,
+        width = this.options.width,
+        height = this.options.height;
 
       switch(dir){
         case 1:
@@ -915,95 +864,46 @@
         }
       },
       genomeDefaults = {
-        agentTreeDepth: 3,
-        agentInputs: 27, // Agents collected inputs length - IMPORTANT: need to ensure it correct lenght otherwise we fail
-        biasHTree: false,
-        biasSTree: false,
-        biasBTree: false,
-        biasNoChange: false
+        options: {
+          agentTreeDepth: 3,
+          agentInputs: 27, // Agents collected inputs length - IMPORTANT: need to ensure it correct lenght otherwise we fail
+          biasHTree: false,
+          biasSTree: false,
+          biasBTree: false,
+          biasNoChange: false
+        }
       };
 
 
-  var Genome = Genev.Genome = function(){
-    var args = Array.prototype.slice.apply(arguments),
-        attributes = [],
-        options,
-        stringChunks,
-        chunkCount;
+  var Genome = Genev.Genome = function( attributes ){
 
-    this.options = {};
+    attributes = attributes || {};
+    var options = _.clone(genomeDefaults.options);
+    _.extend(options, attributes.options);
+    attributes.options = options;
+    _.extend(this, attributes);
+    this.numTotalNodes = this.numTotalNodes || Math.floor(Math.pow(2, this.options.agentTreeDepth + 1) - 1);
+    this.numInputNodes = this.numInputNodes || Math.floor(Math.pow(2, this.options.agentTreeDepth));
+    this.numProcessNodes = this.numProcessNodes || this.numTotalNodes - this.numInputNodes;
 
-    if(utils.toType(args[0]) === "array") {
-      attributes = args[0];
-      options = args[1] || {};
+    this.inputsH = this.inputsH || _.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options.biasNoChange, 0, true);
+    this.inputsS = this.inputsS || _.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options.biasNoChange, 1, true);
+    this.inputsB = this.inputsB || _.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options.biasNoChange, 2, true);
+    this.inputsDir = this.inputsDir || _.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), false, 0, true);
+    this.nodesH = this.nodesH || _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options.biasNoChange);
+    this.nodesS = this.nodesS || _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options.biasNoChange);
+    this.nodesB = this.nodesB || _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options.biasNoChange);
+    this.nodesDir = this.nodesDir || _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, false);
+    this.constArr = this.constArr || _.map(_.range(this.numProcessNodes), Math.random);
 
-    } else if( typeof args[0] === 'string' ) {
-      stringChunks = args[0].split('!');
-      options = args[1] || {};
-    } else if ( utils.toType(args[0]) === "object") {
-      options = args[0];
-
-    }
-
-    _.extend(this.options, genomeDefaults, options);
-
-    this.numTotalNodes = Math.floor(Math.pow(2, this.options.agentTreeDepth + 1) - 1);
-    this.numInputNodes = Math.floor(Math.pow(2, this.options.agentTreeDepth));
-    this.numProcessNodes = this.numTotalNodes - this.numInputNodes;
-
-    this.inputsH = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options.biasNoChange, 0, true));
-    this.inputsS = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options.biasNoChange, 1, true));
-    this.inputsB = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), this.options.biasNoChange, 2, true));
-    this.inputsDir = new Uint8Array(_.invoke(_.range(this.numInputNodes), _.bind(this._getRandomInput, this), false, 0, true));
-    this.nodesH = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options.biasNoChange);
-    this.nodesS = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options.biasNoChange);
-    this.nodesB = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, this.options.biasNoChange);
-    this.nodesDir = _.invoke(_.range(this.numProcessNodes), this._getRandomFunction, false);
-    this.constArr = new Float32Array(_.map(_.range(this.numProcessNodes), Math.random));
-
-    if(this.options.biasHTree || this.options.biasSTree || this.options.biasBTree) {
+    if(this.options.biasHTree || this.options.biasSTree || this.options.biasBTree && !attributes.constArr) {
       this.constArr[0] = Math.random() * 0.4 + 0.3;
     }
-    if(this.options.biasSTree) {
+    if(this.options.biasSTree && !attributes.nodesS) {
       this.nodesS[0] = 'ind';
     }
-    if(this.options.biasBTree) {
+    if(this.options.biasBTree && !attributes.nodesB) {
       this.nodesB[0] = 'ind';
-    }
-
-    if( stringChunks && stringChunks.length > 0 ) {
-      this.numInputNodes = parseInt(stringChunks[0]);
-      this.numProcessNodes = parseInt(stringChunks[1]);
-      this.numTotalNodes = this.numInputNodes + this.numProcessNodes;
-      stringChunks = stringChunks.splice(2);
-      chunkCount = 0;
-      for ( var i = 0; i < this.numInputNodes; ++i ) {
-        this.inputsH[i] = parseInt(stringChunks[chunkCount]);
-        this.inputsS[i] = parseInt(stringChunks[chunkCount + 1]);
-        this.inputsB[i] = parseInt(stringChunks[chunkCount + 2]);
-        this.inputsDir[i] = parseInt(stringChunks[chunkCount + 3]);
-        chunkCount += 4;
-      }
-      for ( var i = 0; i < this.numProcessNodes; ++i ) {
-        this.nodesH[i] = stringChunks[chunkCount];
-        this.nodesS[i] = stringChunks[chunkCount + 1];
-        this.nodesB[i] = stringChunks[chunkCount + 2];
-        this.nodesDir[i] = stringChunks[chunkCount + 3];
-        this.constArr[i] = parseFloat(stringChunks[chunkCount + 4]);
-        chunkCount += 5;
-      }
-    }
-
-    for(var i = 0; i < attributes.length; ++i) {
-      if(attributes[i] instanceof Array || attributes[i] instanceof Uint8Array || attributes[i] instanceof Float32Array){
-        this[attrNames[i]] = attributes[i];
-        // if(attrNames[i] === 'nodesH'){
-        //   this.numProcessNodes = attributes[i].length; // need to reset the length due to mutation/crossover diff process nodes number.
-        // }
-        // if(attrNames[i] === 'inputsH'){
-        //   this.numInputNodes = attributes[i].length;
-        // }
-      }
     }
 
     this.initialize.apply(this, arguments);
@@ -1015,18 +915,21 @@
 
     clone: function() {
       return new Genome(
-        [
-          new Uint8Array(this.inputsH),
-          new Uint8Array(this.inputsS),
-          new Uint8Array(this.inputsB),
-          new Uint8Array(this.inputsDir),
-          this.nodesH.slice(0),
-          this.nodesS.slice(0),
-          this.nodesB.slice(0),
-          this.nodesDir.slice(0),
-          new Float32Array(this.constArr)
-        ],
-        this.options
+        {
+          inputsH: this.inputsH.slice(0),
+          inputsS: this.inputsS.slice(0),
+          inputsB: this.inputsB.slice(0),
+          inputsDir: this.inputsDir.slice(0),
+          nodesH: this.nodesH.slice(0),
+          nodesS: this.nodesS.slice(0),
+          nodesB: this.nodesB.slice(0),
+          nodesDir: this.nodesDir.slice(0),
+          constArr: this.constArr.slice(0),
+          numTotalNodes: this.numTotalNodes,
+          numInputNodes: this.numInputNodes,
+          numProcessNodes: this.numProcessNodes,
+          options: _.clone(this.options)
+        }
       );
     },
     mutate: function( prob ) {
@@ -1068,7 +971,23 @@
                 newOptions[key] = val;
               }
             );
-        return new Genome( newAttr, newOptions );
+        return new Genome(
+          {
+            inputsH: newAttr[0],
+            inputsS: newAttr[1],
+            inputsB: newAttr[2],
+            inputsDir: newAttr[3],
+            nodesH: newAttr[4],
+            nodesS: newAttr[5],
+            nodesB: newAttr[6],
+            nodesDir: newAttr[7],
+            constArr: newAttr[8],
+            numTotalNodes: bigger.numTotalNodes,
+            numInputNodes: bigger.numInputNodes,
+            numProcessNodes: bigger.numProcessNodes,
+            options: newOptions
+          }
+        );
       }
     },
     evaluate: function( inputs ) {
@@ -1088,7 +1007,6 @@
 
       }
 
-
       for( var i = this.numProcessNodes - 1; i >= 0; i-- ) {
         child1Index = i * 2 + 1;
         child2Index = i * 2 + 2;
@@ -1096,29 +1014,31 @@
         sVals[i] = utils.ringify(ops[this.nodesS[i]].apply(this, [sVals[child1Index], sVals[child2Index], i]));
         bVals[i] = utils.ringify(ops[this.nodesB[i]].apply(this, [bVals[child1Index], bVals[child2Index], i]));
         dirVals[i] = utils.ringify(ops[this.nodesDir[i]].apply(this, [dirVals[child1Index], dirVals[child2Index], i]));
-        // if(isNaN(hVals[i]) || isNaN(sVals[i]) || isNaN(bVals[i]) || isNaN(dirVals[i])){
-        //   console.log(i)
-        // }
       }
-       
       return [hVals[0], sVals[0], bVals[0], dirVals[0]];
     },
-    toGenomeString: function() {
-      var out = this.numInputNodes+'!'+this.numProcessNodes+'!';
-      for( var i = 0; i < this.numInputNodes; ++i ) {
-        out += this.inputsH[i] + '!';
-        out += this.inputsS[i] + '!';
-        out += this.inputsB[i] + '!';
-        out += this.inputsDir[i] + '!';
-      }
-      for( var i = 0; i < this.numProcessNodes; ++i ) {
-        out += this.nodesH[i] + '!';
-        out += this.nodesS[i] + '!';
-        out += this.nodesB[i] + '!';
-        out += this.nodesDir[i] + '!';
-        out += this.constArr[i] + '!';
-      }
-        return out;
+
+    toJSON: function() {
+      return _.pick(
+          this,
+          'inputsH',
+          'inputsS',
+          'inputsB',
+          'inputsDir',
+          'nodesH',
+          'nodesS',
+          'nodesB',
+          'nodesDir',
+          'constArr',
+          'numTotalNodes',
+          'numInputNodes',
+          'numProcessNodes',
+          'options'
+        );
+    },
+    fromJSON: function( string ) {
+      var obj = JSON.parse(string);
+      return new Genome(obj);
     },
     _getRandomInput: function( biasNoChange, HSorB, init ) {
       var die = Math.random();

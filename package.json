@@ -1,14 +1,18 @@
 {
-  "name"          : "Genev",
-  "description"   : "Genev.js creates images using genetic evolution.",
-  "url"           : "",
-  "keywords"      : ["genetic", "evolution", "image"],
-  "author"        : "Jokubas Dargis <jokubas@harmonypark.net>",
-  "dependencies"  : {
-    "underscore"  : ">=1.4.3"
+  "name": "Genev",
+  "description": "Genev.js creates images using genetic evolution.",
+  "url": "",
+  "keywords": [
+    "genetic",
+    "evolution",
+    "image"
+  ],
+  "author": "Jokubas Dargis <jokubas@harmonypark.net>",
+  "dependencies": {
+    "underscore": ">=1.4.3"
   },
   "devDependencies": {
-    "underscore"  : ">=1.4.3",
+    "underscore": ">=1.4.3",
     "grunt": "~0.4.1",
     "grunt-contrib-copy": "~0.4.0",
     "grunt-contrib-uglify": "~0.1.1",
@@ -16,11 +20,10 @@
     "grunt-contrib-clean": "0.4.0",
     "grunt-mocha": "~0.2.2",
     "grunt-contrib-watch": "~0.4.4",
-    "matchdep": "~0.1.1"
+    "matchdep": "~0.1.1",
+    "diff": "git://github.com/kpdecker/jsdiff.git"
   },
-  "scripts": {
-
-  },
+  "scripts": {},
   "main": "./dist/all.js",
-  "version"       : "0.0.1"
+  "version": "0.0.1"
 }

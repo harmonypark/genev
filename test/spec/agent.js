@@ -5,20 +5,6 @@ describe('Agent', function () {
         agent.genome.should.be.an('object');
         done();
     });
-    it('decoding and encoding to Genome string should be produce exact copy', function (done){
-        var encoded = agent.toGenomeString(),
-            decoded = new Genev.Agent(encoded),
-            val;
-        for(var key in agent.attributes){
-            val = decoded.key;
-            if(typeof val === "object"){
-                expect(_.isEqual(val, agent.key)).to.equal(true);
-            } else {
-                expect(val).to.equal(agent.key);
-            }
-        }
-        done();
-    });
     it('extended should have a correct prototype', function(done){
         var extended = Genev.Agent.extend({});
 
@@ -26,5 +12,12 @@ describe('Agent', function () {
         expect(extended.prototype.constructor.__super__).to.equal(agent.__proto__);
 
        done();
+    });
+    it('should decode/encode correctly', function(done){
+        var obj = agent.toJSON(),
+            attr = ['dir', 'gen', 'genTime1', 'genTime2', 'delay', 'stop'],
+            testAgent = _.isEqual(_.pick(agent, attr), _.pick(new Genev.Agent(obj), attr));
+        expect(testAgent)
+        done();
     });
 });

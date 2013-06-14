@@ -41,5 +41,11 @@ describe('Individual', function () {
 
        done();
     });
+    it('should decode/encode to JSON correctly', function(done){
+        var json = individual.toJSON();
+        expect(individual.fromJSON(json).toJSON() === json).to.equal(true);
+        done();
+    });
+
 
 });
